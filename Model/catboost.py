@@ -124,7 +124,7 @@ def train(drop_col:list,filename:str):
                                 l2_leaf_reg=7,
                                 eval_metric=metrics.F1(use_weights=False)
                                 ) #class weight 220 best
-    model.fit(train_dataset,eval_set=val_dataset)
+    model.fit(train_dataset)
 
     private_inference = cb.Pool(private_test_1[selected_col],cat_features=cat_col)
     private_test_1['pred'] = model.predict_proba(private_inference)[:,1]
