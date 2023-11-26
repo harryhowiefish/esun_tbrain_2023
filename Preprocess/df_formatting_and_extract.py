@@ -327,7 +327,7 @@ def main():
     
     #標註是否為新消費者(前面的cycle沒有看到的卡號)
     card_list = set()
-    for i in tqdm(range(0,len(date_list))):
+    for i in tqdm(range(0,len(date_list)),desc='新消費者'):
         ##update all_data info first
         all_data.loc[all_data['授權日期'].isin(date_list[i]),'新消費者'] = all_data[all_data['授權日期'].isin(date_list[i])].apply(lambda x:x['交易卡號'] not in card_list,axis=1)
         #update card_df
