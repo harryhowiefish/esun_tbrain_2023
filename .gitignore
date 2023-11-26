@@ -5,7 +5,4 @@ dataset_2nd/
 catboost_info/
 __pycache__/
 *.pyc
-Model/__pycache__/model_4.cpython-311.pyc
-Model/__pycache__/model_3.cpython-311.pyc
-Model/__pycache__/model_2.cpython-311.pyc
-Model/__pycache__/model_1.cpython-311.pyc
+data_type.pkl
