@@ -1,8 +1,9 @@
+.*
+!/.gitignore
 *.csv
 .venv/
 dataset_1st/
 dataset_2nd/
 catboost_info/
 __pycache__/
-*.pyc
 data_type.pkl
