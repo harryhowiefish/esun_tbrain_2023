@@ -20,5 +20,5 @@ $ pip install -r requirements.txt
 $ python ./Preprocess/df_formatting_and_extract.py
 
 # training,inference and voting
-$ main.py
+$ python main.py
 ```

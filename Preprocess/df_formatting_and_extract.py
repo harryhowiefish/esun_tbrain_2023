@@ -31,10 +31,10 @@ def column_rename(df: pd.DataFrame) -> list:
     - 更改欄位標題(改為中文以便後續使用)
     
     input
-    - dataframe
+    - df(DataFrame)
 
     output
-    - list（column name)
+    - list: column name
 
     """
     col_dict = {'txkey':'交易序號','locdt':'授權日期','loctm':'授權時間',
@@ -53,10 +53,10 @@ def extract_time(df:pd.DataFrame) -> pd.DataFrame:
     - 把授權時間拆開成小時、分鐘、秒
     
     input
-    - dataframe
+    - df(DataFrame)
 
     output
-    - dataframe
+    - DataFrame
     """
 
     temp = df['授權時間'].apply(lambda x: str(x).zfill(6))
@@ -72,10 +72,10 @@ def reformat(df:pd.DataFrame) -> pd.DataFrame:
     - 修改資料型態來降低資料大小
     
     input
-    - dataframe
+    - df(DataFrame)
 
     output
-    - dataframe
+    - DataFrame
     """
     bool_col = ['網路交易註記', '分期交易註記', '是否紅利交易', '超額註記碼', 'Fallback註記', '3DS註記']
     cat_col = ['顧客ID', '交易卡號', '授權日期','授權小時','授權分鐘','授權秒', '交易類別', '交易型態', '特店代號', '收單行代碼',
@@ -100,10 +100,10 @@ def create_date_list(all_date,size=4):
     - 將日期拆成4天為一組的區間，以便後續資料處理
     
     input
-    - list(所有日期)
+    - all_date(list):所有日期
 
     output
-    - list(切分後的sublist)
+    - list:切分後的sublist
     """
     sublists = [all_date[i:i + size] for i in range(0, len(all_date), size)]
     # Adding the last sublist with 5 elements
@@ -114,39 +114,34 @@ def create_date_list(all_date,size=4):
 
 class CardCycleProcessor:
     """
-    A class for processing card cycle data within specified date ranges.
-
-    This class provides functionalities to aggregate data over given date ranges
-    and apply statistical methods on a specified column, with optional post-processing.
-
-    Attributes:
-        df (pd.DataFrame): A pandas DataFrame containing the data to be processed.
+    用途
+    - 每週期載入資料來針對特定週期做特定的統計分析，包含選擇性的資料後處理
     """
 
     def __init__(self, df: pd.DataFrame):
         """
-        Initialize the CardCycleProcessor with a DataFrame.
+        初始化class
 
-        Args:
-            df (pd.DataFrame): The DataFrame to process.
+        input:
+        - df(DataFrame)
         """
         self.df = df
 
     def card_cycle_processing(self, date_range: list, col: str, method: str, name: str, 
                               post_processing=None, fillna: bool = True) -> pd.DataFrame:
         """
-        Process card cycle data in batches and apply statistical methods to a specified column.
+        依照特定週期載入資料來針對特定週期做特定的統計分析，包含選擇性的資料後處理
 
-        Args:
-            date_range (list): List of date ranges (sublists) to process.
-            col (str): Column name to be aggregated.
-            method (str): Aggregation method (mean, median, count, sum, or ratio).
-            name (str): Name of the new column to store the results.
-            post_processing (Callable, optional): Function for additional processing. Defaults to None.
-            fillna (bool): Fill NA values with 0 if True. Defaults to True.
+        input:
+        - date_range (list): 日期週期(sublists)
+        - col (str): 特定欄位
+        - method (str): 統計方法(mean, median, count, sum, or ratio).　ratio等同value_counts(normalize=True)
+        - name (str): 新的欄位名稱
+        - post_processing (Callable, optional): 選擇性的資料後處理. Defaults to None.
+        - fillna (bool): 填補缺失值
 
-        Returns:
-            pd.DataFrame: The processed DataFrame with the new column added.
+        output:
+        - DataFrame
         """
         previous_dates = date_range[0].copy()
         for i in tqdm(range(1, len(date_range)), desc=name):
@@ -170,132 +165,48 @@ class CardCycleProcessor:
     @staticmethod
     def multi_key_mapping(x, mapping, col):
         """
-        Map a multi-key tuple from a DataFrame row to a value in the provided mapping.
+        用來multi-key的dictionary map到資料表上的交易卡號以及特定欄位
 
-        Args:
-            x (pd.Series): A row of the DataFrame.
-            mapping (dict): A dictionary mapping keys to values.
-            col (str): Column name to be used as part of the key.
+        input:
+        - x (pd.Series): 一行資料
+        - mapping (dict): Multi-key dictionary
+        - col (str): 特定欄位名稱
 
-        Returns:
-            The value from the mapping for the given key, or 0 if the key is not found.
+        output:
+        - value
         """
         return mapping.get((x['交易卡號'], x[col]), 0)
 
     @staticmethod
     def spending_ratio(x, mapping, col):
         """
-        Calculate the spending ratio of a DataFrame row based on the provided mapping.
+        計算當次消費和同卡號平均消費金額的倍率
 
-        Args:
-            x (pd.Series): A row of the DataFrame.
-            mapping (dict): A dictionary mapping keys to aggregate values.
-            col (str): Column name whose value is to be divided by the aggregate value.
+        input:
+        - x (pd.Series): 一行資料
+        - mapping (dict): Single-key dictionary
+        - col (str): 特定欄位名稱
 
-        Returns:
-            The spending ratio, or 0 if the key is not in the mapping or the aggregate value is 0.
+        output:
+        - value
         """
-        card_val = mapping.get(x['交易卡號'])
-        if not card_val:
+        if x['交易卡號'] not in mapping or mapping[x['交易卡號']]==0:
             return 0
         else:
-            return x[col] / card_val
-
-class BehaviorCycleProcessor:
-    """
-    A class for processing behavior cycles of card transactions.
-
-    This class analyzes transaction data to update counts and assess specific habits based on transaction history.
-    """
-
-    def __init__(self, all_data: pd.DataFrame, date_list: list):
-        """
-        Initialize the BehaviorCycleProcessor with transaction data and date ranges.
-
-        Args:
-            all_data (pd.DataFrame): DataFrame containing transaction data.
-            date_list (list): List of date ranges for processing.
-        """
-        self.all_data = all_data
-        self.date_list = date_list
-        self.card_df = pd.DataFrame(columns=['交易卡號'])
-        
-
-    def process_cycles(self):
-        """
-        Process the behavior cycles for the given date ranges and update the DataFrame.
-
-        Iterates through the date ranges, updating transaction and internet consumption
-        counts, and determining habitual internet consumption patterns.
-        """
-        self.card_list = set()
-        for i in tqdm(range(0, len(self.date_list))):
-            self.card_df.set_index('交易卡號', inplace=True)
-            self.all_data.loc[self.all_data['授權日期'].isin(self.date_list[i]), '是否符合網路消費習慣'] = \
-                self.all_data[self.all_data['授權日期'].isin(self.date_list[i])].apply(
-                    lambda x: self.check_channel_matching(x, self.card_df, self.card_list), axis=1)
-            self.card_df.reset_index(inplace=True)
-
-            new_data = self.all_data[self.all_data['授權日期'].isin(self.date_list[i])]
-            new_cards = [card for card in new_data['交易卡號'].unique() if card not in self.card_list]
-            self.card_df = pd.concat([self.card_df, pd.DataFrame(new_cards, columns=['交易卡號'])])
-            self.card_df['習慣網路消費label'] = -1  # inconclusive
-            self.card_df.fillna(0, inplace=True)
-            self.card_list.update(new_cards)
-
-            mapping = new_data.groupby('交易卡號')['轉換後交易金額'].count().to_dict()
-            self.card_df['交易次數'] = self.card_df.apply(lambda x: self.update(x, '交易次數', mapping), axis=1)
-            mapping = new_data.groupby('交易卡號')['網路交易註記'].sum().to_dict()
-            self.card_df['網路消費次數'] = self.card_df.apply(lambda x: self.update(x, '網路消費次數', mapping), axis=1)
-            self.card_df.loc[self.card_df['網路消費次數'] / self.card_df['交易次數'] > 0.7, '習慣網路消費label'] = 1
-            self.card_df.loc[self.card_df['網路消費次數'] / self.card_df['交易次數'] < 0.3, '習慣網路消費label'] = 0
-
-
-    @staticmethod
-    def update(x, col, mapping,method):
-        """
-        Update the count for a card in the DataFrame.
-
-        Args:
-            x (pd.Series): A row of the DataFrame.
-            col (str): Column name to be updated.
-            mapping (dict): A dictionary mapping card numbers to new count values.
-
-        Returns:
-            Updated value for the column.
-        """
-        if x['交易卡號'] not in mapping:
-            return x[col]
-        else:
-            if method=='sum':
-                return x[col]+mapping[x['交易卡號']]
-            elif method=='count':
-                return x[col]+1
-
-    @staticmethod
-    def check_behavior(x, reference_df):
-        """
-        Check if a transaction matches the habitual internet consumption pattern.
-
-        Args:
-            x (pd.Series): A row of the DataFrame.
-            reference_df (pd.DataFrame): DataFrame containing reference labels.
-
-        Returns:
-            An integer indicating the match status (-1, 0, or 1).
-        """
-
-        reference = reference_df.loc[x['交易卡號']]
-        if len(reference)==0:
-            return -1
-        if reference['習慣網路消費label'] == -1:
-            return -1
-        elif reference['習慣網路消費label'] == x['網路交易註記']:
-            return 1
-        elif reference['習慣網路消費label'] != x['網路交易註記']:
-            return 0
+            return x[col] / mapping[x['交易卡號']]
 
 def update(x,col,mapping,method):
+    """
+    更新card_df裡特定卡號的數值
+
+    input:
+    - x (pd.Series): 一行資料
+    - mapping (dict): Single-key dictionary
+    - col (str): 特定欄位名稱
+
+    output:
+    - value
+    """
     if x['交易卡號'] not in mapping:
         return x[col]
     else:
@@ -305,6 +216,19 @@ def update(x,col,mapping,method):
             return x[col]+1
 
 def check_behavior(x,reference_df,card_list,behavior_col,data_col):
+    """
+    檢查當次消費行為是否和行為習慣吻合 e.x.若主要網路消費，當次也是網路消費則為1，非網路消費則為0
+
+    input:
+    - x (pd.Series): 一行資料
+    - reference_df (pd.DataFrame): 各卡號的行為偏好
+    - card_list: 已經有消費紀錄的卡號list
+    - behavior_col (str): 在reference_df裡的特定欄位
+    - data_col(str): 在all_data裡的特定欄位
+
+    output:
+    - value
+    """
     if x['交易卡號'] not in card_list:
         return -1
     label = reference_df.loc[x['交易卡號'],behavior_col]
@@ -317,11 +241,24 @@ def check_behavior(x,reference_df,card_list,behavior_col,data_col):
 
 
 def query_ratio(x,reference_df,card_list,col):
+    """
+    索引特定的行為比例 e.x.國內消費比例, 消費頻率
+
+    input:
+    - x (pd.Series): 一行資料
+    - reference_df (pd.DataFrame): 各卡號的行為偏好
+    - card_list: 已經有消費紀錄的卡號list
+    - col (str): 在reference_df裡的特定欄位
+
+    output:
+    - value
+    """
     if x['交易卡號'] not in card_list:
         return 1
     return reference_df.loc[x['交易卡號'],col]
 
 def main():
+    print('loading data...')
     train = pd.read_csv('./dataset_1st/training.csv')
     public_test = pd.read_csv('./dataset_1st/public_processed.csv')
     private_test_1 = pd.read_csv('./dataset_2nd/private_1_processed.csv')
@@ -334,7 +271,8 @@ def main():
     all_data.reset_index(drop=True,inplace=True)
     all_data.fillna(-1,inplace=True)
     all_data = reformat(all_data)
-
+    
+    print('feature enginneering...')
     #金額超過正常刷卡金額的PR80只有用train data以避免data leakage
     all_data['高金額'] = all_data['轉換後交易金額']>train[train['盜刷註記']==0]['轉換後交易金額'].quantile(q=.80)
     del train,public_test,private_test_1
@@ -357,8 +295,8 @@ def main():
         all_data[f"num_{col}"] = all_data[col]
 
     #組合特定cat_col
-    all_data['授權週日_時段'] = all_data['授權週日'].astype('str')+all_data['時段']
-    all_data['交易類別_交易型態'] = all_data['交易類別'].astype('str')+all_data['交易型態'].astype('str')
+    all_data['授權週日_時段'] = all_data['授權週日'].astype('str')+"_"+all_data['時段']
+    all_data['交易類別_交易型態'] = all_data['交易類別'].astype('str')+"_"+all_data['交易型態'].astype('str')
 
     #date_list在後續feature engineering的時候可以避免data leakage
     date_list = create_date_list(sorted(all_data['授權日期'].unique()))
@@ -387,14 +325,16 @@ def main():
     for col in ['時段','網路交易註記','商戶類別代碼','消費城市','收單行代碼','特店代號']:
         all_data = processor.card_cycle_processing(date_list,col,'ratio',f'卡號在{col}的比例',CardCycleProcessor.multi_key_mapping)
     
+
+    #針對同卡號分析行為模式，包含網路消費習慣, 國內外消費習慣, 國內消費比例, 消費頻率並記錄在card_df
     print('running card behavior...this will take a while')
-    card_df = pd.DataFrame(columns=['交易卡號','交易次數','網路消費次數','國內消費次數','交易週數','可消費週數'])
+    card_df = pd.DataFrame(columns=['交易卡號','交易次數','網路消費次數','國內消費次數','交易週數','可消費週數','網路交易behavior','國內消費behavior'])
     card_list = set()
     for i in tqdm(range(0,len(date_list))):
         ##update all_data info first
         card_df.set_index('交易卡號',inplace=True)
         all_data.loc[all_data['授權日期'].isin(date_list[i]),'是否符合網路消費習慣'] = all_data[all_data['授權日期'].isin(date_list[i])].apply(lambda x:check_behavior(x,card_df,card_list,'網路交易behavior','網路交易註記'),axis=1)
-        all_data.loc[all_data['授權日期'].isin(date_list[i]),'是否符合國內外消費習慣'] = all_data[all_data['授權日期'].isin(date_list[i])].apply(lambda x:check_behavior(x,card_df,card_list,'國內消費為主','消費地國別'),axis=1)
+        all_data.loc[all_data['授權日期'].isin(date_list[i]),'是否符合國內外消費習慣'] = all_data[all_data['授權日期'].isin(date_list[i])].apply(lambda x:check_behavior(x,card_df,card_list,'國內消費behavior','消費地國別'),axis=1)
         all_data.loc[all_data['授權日期'].isin(date_list[i]),'國內消費比例'] = all_data[all_data['授權日期'].isin(date_list[i])].apply(lambda x:query_ratio(x,card_df,card_list,'國內消費比例'),axis=1)
         all_data.loc[all_data['授權日期'].isin(date_list[i]),'消費頻率'] = all_data[all_data['授權日期'].isin(date_list[i])].apply(lambda x:query_ratio(x,card_df,card_list,'消費頻率'),axis=1)
         card_df.reset_index(inplace=True)
@@ -404,9 +344,8 @@ def main():
         new_data = all_data[all_data['授權日期'].isin(date_list[i])]
         new_cards = [card for card in new_data['交易卡號'].unique() if card not in card_list]
         card_df = pd.concat([card_df,pd.DataFrame(new_cards,columns=['交易卡號'])])
-        card_df['網路交易behavior'] = -1 #inconclusive
-        card_df['國內消費為主'] = -1 #inconclusive
-        card_df.fillna(0,inplace=True)
+        card_df['網路交易behavior'].fillna(-1,inplace=True) #new/inconclusive
+        card_df['國內消費behavior'].fillna(-1,inplace=True) #new/inconclusive
         card_list.update(new_cards)
 
 
@@ -419,12 +358,15 @@ def main():
         card_df['國內消費次數'] = card_df.apply(lambda x: update(x,'國內消費次數',mapping,'sum'),axis=1)
         card_df['國內消費比例'] = card_df['國內消費次數']/card_df['交易次數']
 
-        card_df.loc[card_df['網路消費次數']/card_df['交易次數']>0.7,'習慣網路消費label']=1
-        card_df.loc[card_df['網路消費次數']/card_df['交易次數']<0.3,'習慣網路消費label']=0
-        card_df.loc[card_df['國內消費比例']>0.7,'國內消費為主']=0
-        card_df.loc[card_df['國內消費比例']<0.3,'國內消費為主']=1
+        card_df.loc[card_df['網路消費次數']/card_df['交易次數']>0.7,'網路交易behavior']=1
+        card_df.loc[card_df['網路消費次數']/card_df['交易次數']<0.3,'網路交易behavior']=0
+        card_df.loc[card_df['國內消費比例']>0.7,'國內消費behavior']=0
+        card_df.loc[card_df['國內消費比例']<0.3,'國內消費behavior']=1
         card_df['可消費週數'] = card_df['可消費週數']+1
         card_df['消費頻率'] = card_df['交易週數']/card_df['可消費週數']
+
+    all_data['是否符合網路消費習慣'] = all_data['是否符合網路消費習慣'].astype('int8')
+    all_data['是否符合國內外消費習慣'] = all_data['是否符合國內外消費習慣'].astype('int8')
 
 
     print('export results...')
@@ -441,6 +383,7 @@ def main():
     val.to_csv('val_data_extracted.csv',index=False)
     public_test.to_csv('public_data_extracted.csv',index=False)
     private_test_1.to_csv('private1_data_extracted.csv',index=False)
+    card_df.to_csv('card_df.csv',index=False)
 
 if __name__ == '__main__':
     main()  

@@ -1,3 +1,18 @@
+"""
+用途
+- 用部分的feature進行訓練
+
+input
+- train_data_extracted.csv
+- val_data_extracted.csv
+- public_data_extracted.csv
+- private1_data_extracted.csv
+
+output
+- DataFrame: submission prediction (probability)
+
+"""
+
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -10,6 +25,20 @@ import os
 
 
 def train():
+    """
+    用途
+    - 用部分的feature進行訓練
+
+    input
+    - train_data_extracted.csv
+    - val_data_extracted.csv
+    - public_data_extracted.csv
+    - private1_data_extracted.csv
+
+    output
+    - DataFrame: submission prediction (probability)
+
+    """
     print('loading data...')
     train = pd.read_csv('./train_data_extracted.csv')
     val = pd.read_csv('./val_data_extracted.csv')
@@ -48,7 +77,7 @@ def train():
                 '授權秒'
                 '是否符合網路消費習慣','是否符合國內外消費習慣',
                 '授權週日_時段','交易類別_交易型態',
-                '新消費者'
+                '新消費者','消費頻率'
                 ]
     cat_col = [col for col in cat_col if col not in drop_col]
     selected_col = [col for col in train.columns if col not in drop_col]
@@ -70,7 +99,7 @@ def train():
     
     inference_dataset = cb.Pool(public_test[selected_col],cat_features=cat_col)
     public_test['pred'] = model.predict_proba(inference_dataset)[:,1]
-    public_ans = pd.read_csv('../dataset_2nd/public.csv')
+    public_ans = pd.read_csv('./dataset_2nd/public.csv')
     public_ans = public_ans[['txkey','label']]
     public_ans.set_index('txkey',inplace=True)
     gt = public_ans.loc[public_test.set_index('交易序號').index,'label']
@@ -78,7 +107,7 @@ def train():
     print('precision:',precision_score(gt,public_test['pred'].round()))
     print('recall:',recall_score(gt,public_test['pred'].round()))
 
-    sub = pd.read_csv('../31_範例繳交檔案.csv')
+    sub = pd.read_csv('./31_範例繳交檔案.csv')
     sub.set_index('txkey',inplace=True)
     sub.drop('pred',axis=1,inplace=True)
     sub.loc[public_test.set_index('交易序號').index,'pred'] = public_test.set_index('交易序號')['pred']
