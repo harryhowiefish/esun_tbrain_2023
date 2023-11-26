@@ -67,16 +67,6 @@ def train(drop_col:list,filename:str):
             '授權週日_時段','交易類別_交易型態',
             '新消費者'
                 ]
-    drop_col = ['盜刷註記','交易序號',
-                '授權日期','授權週數','4_day_cycle','4_day_count',
-                '個人消費金額中位數倍率',
-                '個人平均消費金額倍率',
-                '卡號在網路交易註記比例',
-                '授權秒'
-                '是否符合網路消費習慣','是否符合國內外消費習慣',
-                '授權週日_時段','交易類別_交易型態',
-                '新消費者','消費頻率'
-                ]
     cat_col = [col for col in cat_col if col not in drop_col]
     selected_col = [col for col in train.columns if col not in drop_col]
 
@@ -97,10 +87,6 @@ def train(drop_col:list,filename:str):
     
     inference_dataset = cb.Pool(public_test[selected_col],cat_features=cat_col)
     public_test['pred'] = model.predict_proba(inference_dataset)[:,1]
-    public_ans = pd.read_csv('./dataset_2nd/public.csv')
-    public_ans = public_ans[['txkey','label']]
-    public_ans.set_index('txkey',inplace=True)
-    gt = public_ans.loc[public_test.set_index('交易序號').index,'label']
     print('f1:',f1_score(gt,public_test['pred'].round()))
     print('precision:',precision_score(gt,public_test['pred'].round()))
     print('recall:',recall_score(gt,public_test['pred'].round()))

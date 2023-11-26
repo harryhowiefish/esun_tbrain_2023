@@ -325,6 +325,15 @@ def main():
     for col in ['時段','網路交易註記','商戶類別代碼','消費城市','收單行代碼','特店代號']:
         all_data = processor.card_cycle_processing(date_list,col,'ratio',f'卡號在{col}的比例',CardCycleProcessor.multi_key_mapping)
     
+    #標註是否為新消費者(前面的cycle沒有看到的卡號)
+    card_list = set()
+    for i in tqdm(range(0,len(date_list))):
+        ##update all_data info first
+        all_data.loc[all_data['授權日期'].isin(date_list[i]),'新消費者'] = all_data[all_data['授權日期'].isin(date_list[i])].apply(lambda x:x['交易卡號'] not in card_list,axis=1)
+        #update card_df
+        new_data = all_data[all_data['授權日期'].isin(date_list[i])]
+        new_cards = [card for card in new_data['交易卡號'].unique() if card not in card_list]
+        card_list.update(new_cards)
 
     #針對同卡號分析行為模式，包含網路消費習慣, 國內外消費習慣, 國內消費比例, 消費頻率並記錄在card_df
     print('running card behavior...this will take a while')
@@ -377,7 +386,7 @@ def main():
     train = all_data[all_data['授權日期'].isin(range(0,52))]
     val = all_data[all_data['授權日期'].isin(range(52,56))]
     public_test = all_data[all_data['授權日期'].isin(range(56,60))]
-    private_test_1 = all_data[all_data['授權日期'].isin(range(61,65))]
+    private_test_1 = all_data[all_data['授權日期'].isin(range(60,65))]
 
     train.to_csv('train_data_extracted.csv',index=False)
     val.to_csv('val_data_extracted.csv',index=False)
