@@ -7,3 +7,4 @@ dataset_2nd/
 catboost_info/
 __pycache__/
 data_type.pkl
+*.ipynb
