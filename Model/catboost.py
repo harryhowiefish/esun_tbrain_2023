@@ -12,6 +12,7 @@ output
 - DataFrame: submission prediction (probability)
 
 """
+
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -23,16 +24,14 @@ import time
 import os
 
 
-def train():
+def train(drop_col:list,filename:str):
     """
     用途
     - 用部分的feature進行訓練
 
     input
-    - train_data_extracted.csv
-    - val_data_extracted.csv
-    - public_data_extracted.csv
-    - private1_data_extracted.csv
+    - drop_col(list):要刪去哪些欄位
+    - filename(str):輸出的檔名
 
     output
     - DataFrame: submission prediction (probability)
@@ -64,16 +63,19 @@ def train():
             '授權小時','授權分鐘','授權秒', 
             '交易類別', '交易型態', '特店代號', '收單行代碼',
             '商戶類別代碼', '分期期數', '消費地國別', '消費城市', '狀態碼', '支付型態', '消費地幣別',
-            '是否符合國內外消費習慣',
+            '是否符合網路消費習慣','是否符合國內外消費習慣',
             '授權週日_時段','交易類別_交易型態',
             '新消費者'
-            ]
+                ]
     drop_col = ['盜刷註記','交易序號',
                 '授權日期','授權週數','4_day_cycle','4_day_count',
+                '個人消費金額中位數倍率',
+                '個人平均消費金額倍率',
                 '卡號在網路交易註記比例',
-                'num_授權日期', 'num_授權週數',
-                '授權秒',
-                '消費地幣別','是否符合網路消費習慣',
+                '授權秒'
+                '是否符合網路消費習慣','是否符合國內外消費習慣',
+                '授權週日_時段','交易類別_交易型態',
+                '新消費者','消費頻率'
                 ]
     cat_col = [col for col in cat_col if col not in drop_col]
     selected_col = [col for col in train.columns if col not in drop_col]
@@ -134,4 +136,4 @@ def train():
     if not os.path.exists('result'):
         # Create the folder
         os.makedirs('result')
-    sub.reset_index().to_csv('./result/04_shopping_freq_with_public_retrain.csv',index=False)
+    sub.reset_index().to_csv(f'./result/{filename}',index=False)

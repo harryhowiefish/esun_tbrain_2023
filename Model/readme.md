@@ -1,9 +1,7 @@
 # 模型訓練
-本資料夾內含四個程式:
-- model_1.py: 用部分的feature進行訓練
-- model_2.py: 用部分的feature進行訓練
-- model_3.py: 用部分的feature進行訓練
-- model_4.py: 用部分的feature進行訓練
+本資料夾內含一個程式:
+- catboost.py: 用部分的feature進行訓練，並輸出預測的probability
+
 
 
 ## ML框架
