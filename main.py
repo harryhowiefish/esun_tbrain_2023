@@ -3,7 +3,7 @@
 訓練四個模型之後把結果平均後輸出
 """
 
-from Model import catboost,model_2,model_3,model_4
+from Model import catboost
 from Voting import vanilla_voting
 
 def main():
