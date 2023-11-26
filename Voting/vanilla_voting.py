@@ -36,8 +36,8 @@ def voting():
     result_2 = pd.read_csv('./result/02_online_pattern_with_public_retrain.csv',index_col=0)
     result_3 = pd.read_csv('./result/03_country_pattern_with_public_retrain.csv',index_col=0)
     result_4 = pd.read_csv('./result/04_shopping_freq_with_public_retrain.csv',index_col=0)
-    result = pd.concat([result_1,result_2,result_4],axis=1)
+    result = pd.concat([result_1,result_2,result_3,result_4],axis=1)
     result['pred_mean'] = result.mean(axis=1)
     result = result['pred_mean'].round().astype('int').to_frame()
     result.columns = ['pred']
-    result.to_csv('./submission.csv',index=False)
+    result.reset_index().to_csv('./submission.csv',index=False)
