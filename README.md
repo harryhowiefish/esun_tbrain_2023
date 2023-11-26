@@ -6,7 +6,7 @@
  
 ## 檔案用途:
 - Preprocess/: 存放前處理的code
-- Model/: 存放模型相關code，包含4個模型（catboost with GPU）
+- Model/: 存放模型相關code（catboost with GPU）
 - Voting/:存放平均結果+輸出submission的code
 - requirements.txt: 需要的套件
 - main.py: 執行整個訓練流程
