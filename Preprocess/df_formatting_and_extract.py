@@ -260,7 +260,7 @@ def query_ratio(x,reference_df,card_list,col):
 def main():
     print('loading data...')
     train = pd.read_csv('./dataset_1st/training.csv')
-    public_test = pd.read_csv('./dataset_1st/public_processed.csv')
+    public_test = pd.read_csv('./dataset_2nd/public.csv')
     private_test_1 = pd.read_csv('./dataset_2nd/private_1_processed.csv')
 
     all_data = pd.concat([train,public_test,private_test_1])
@@ -318,16 +318,16 @@ def main():
 
     #計算同卡號(過去)每週平均刷卡次數，由於mapping計算方法與其他不同，因此沒有做成function
     previous_dates = date_list[0].copy()
-    for i in tqdm(range(1,len(date_list)),desc='weekly_刷卡_count'):
-        mapping = all_data[all_data['授權日期'].isin(previous_dates)].groupby(['交易卡號','4_day_cycle'])['盜刷註記'].count().groupby(level=0).mean().to_dict()
-        all_data.loc[all_data['授權日期'].isin(date_list[i]),'weekly_刷卡_count']=all_data[all_data['授權日期'].isin(date_list[i])]['交易卡號'].map(mapping)
+    for i in tqdm(range(1,len(date_list)),desc='每週期平均交易數'):
+        mapping = all_data[all_data['授權日期'].isin(previous_dates)].groupby(['交易卡號','loading_cycle'])['盜刷註記'].count().groupby(level=0).mean().to_dict()
+        all_data.loc[all_data['授權日期'].isin(date_list[i]),'每週期平均交易數']=all_data[all_data['授權日期'].isin(date_list[i])]['交易卡號'].map(mapping)
         previous_dates+=date_list[1]
-    all_data['weekly_刷卡_count'].fillna(0,inplace=True)
+    all_data['每週期平均交易數'].fillna(0,inplace=True)
     processor = CardCycleProcessor(all_data)
 
-    all_data = processor.card_cycle_processing(date_list,'盜刷註記','mean','盜刷_mean')
+    all_data = processor.card_cycle_processing(date_list,'盜刷註記','mean','盜刷比例')
     all_data = processor.card_cycle_processing(date_list,'轉換後交易金額','mean','個人平均消費金額倍率',CardCycleProcessor.spending_ratio)
-    all_data = processor.card_cycle_processing(date_list,'轉換後交易金額','median','個人消費金額中位數倍率',CardCycleProcessor.spending_ratio)
+    # all_data = processor.card_cycle_processing(date_list,'轉換後交易金額','median','個人消費金額中位數倍率',CardCycleProcessor.spending_ratio)
     for col in ['時段','網路交易註記','商戶類別代碼','消費城市','收單行代碼','特店代號']:
         all_data = processor.card_cycle_processing(date_list,col,'ratio',f'卡號在{col}的比例',CardCycleProcessor.multi_key_mapping)
     
@@ -351,7 +351,7 @@ def main():
         all_data.loc[all_data['授權日期'].isin(date_list[i]),'是否符合網路消費習慣'] = all_data[all_data['授權日期'].isin(date_list[i])].apply(lambda x:check_behavior(x,card_df,card_list,'網路交易behavior','網路交易註記'),axis=1)
         all_data.loc[all_data['授權日期'].isin(date_list[i]),'是否符合國內外消費習慣'] = all_data[all_data['授權日期'].isin(date_list[i])].apply(lambda x:check_behavior(x,card_df,card_list,'國內消費behavior','消費地國別'),axis=1)
         all_data.loc[all_data['授權日期'].isin(date_list[i]),'國內消費比例'] = all_data[all_data['授權日期'].isin(date_list[i])].apply(lambda x:query_ratio(x,card_df,card_list,'國內消費比例'),axis=1)
-        all_data.loc[all_data['授權日期'].isin(date_list[i]),'消費頻率'] = all_data[all_data['授權日期'].isin(date_list[i])].apply(lambda x:query_ratio(x,card_df,card_list,'消費頻率'),axis=1)
+        all_data.loc[all_data['授權日期'].isin(date_list[i]),'消費頻率_週期'] = all_data[all_data['授權日期'].isin(date_list[i])].apply(lambda x:query_ratio(x,card_df,card_list,'消費頻率_週期'),axis=1)
         card_df.reset_index(inplace=True)
 
 
@@ -367,20 +367,20 @@ def main():
 
 
         mapping = new_data.groupby('交易卡號')['網路交易註記'].count().to_dict()
-        card_df['交易次數'] = card_df.apply(lambda x: update(x,'交易次數',mapping,'sum'),axis=1)
-        card_df['交易週數'] = card_df.apply(lambda x: update(x,'交易週數',mapping,'count'),axis=1)
+        card_df['交易總次數'] = card_df.apply(lambda x: update(x,'交易總次數',mapping,'sum'),axis=1)
+        card_df['交易週期數'] = card_df.apply(lambda x: update(x,'交易週期數',mapping,'count'),axis=1)
         mapping = new_data.groupby('交易卡號')['網路交易註記'].sum().to_dict()
         card_df['網路消費次數'] = card_df.apply(lambda x: update(x,'網路消費次數',mapping,'sum'),axis=1)
         mapping = new_data[new_data['消費地國別']==0].groupby('交易卡號')['轉換後交易金額'].count().to_dict()
         card_df['國內消費次數'] = card_df.apply(lambda x: update(x,'國內消費次數',mapping,'sum'),axis=1)
-        card_df['國內消費比例'] = card_df['國內消費次數']/card_df['交易次數']
+        card_df['國內消費比例'] = card_df['國內消費次數']/card_df['交易總次數']
 
-        card_df.loc[card_df['網路消費次數']/card_df['交易次數']>0.7,'網路交易behavior']=1
-        card_df.loc[card_df['網路消費次數']/card_df['交易次數']<0.3,'網路交易behavior']=0
+        card_df.loc[card_df['網路消費次數']/card_df['交易總次數']>0.7,'網路交易behavior']=1
+        card_df.loc[card_df['網路消費次數']/card_df['交易總次數']<0.3,'網路交易behavior']=0
         card_df.loc[card_df['國內消費比例']>0.7,'國內消費behavior']=0
         card_df.loc[card_df['國內消費比例']<0.3,'國內消費behavior']=1
-        card_df['可消費週數'] = card_df['可消費週數']+1
-        card_df['消費頻率'] = card_df['交易週數']/card_df['可消費週數']
+        card_df['可交易週期數'] = card_df['可交易週期數']+1
+        card_df['消費頻率_週期'] = card_df['交易週期數']/card_df['可交易週期數']
 
     all_data['是否符合網路消費習慣'] = all_data['是否符合網路消費習慣'].astype('int8')
     all_data['是否符合國內外消費習慣'] = all_data['是否符合國內外消費習慣'].astype('int8')
