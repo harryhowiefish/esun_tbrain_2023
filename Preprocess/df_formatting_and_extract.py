@@ -109,7 +109,7 @@ def create_date_list(all_date,size=4):
     # Adding the last sublist with 5 elements
     if len(sublists[-1])<=2:
         sublists[-2] = sublists[-2]+sublists[-1]
-    sublists.pop(-1)
+        sublists.pop(-1)
     return sublists
 
 class CardCycleProcessor:
@@ -274,41 +274,46 @@ def main():
     
     print('feature enginneering...')
     #金額超過正常刷卡金額的PR80只有用train data以避免data leakage
-    all_data['高金額'] = all_data['轉換後交易金額']>train[train['盜刷註記']==0]['轉換後交易金額'].quantile(q=.80)
+    all_data['高金額'] = (all_data['轉換後交易金額']>train[train['盜刷註記']==0]['轉換後交易金額'].quantile(q=.80)).astype('int8')
     del train,public_test,private_test_1
 
-    #4 day cycle為了配合資料提供週期而定
+    #date_list在後續feature engineering的時候可以避免data leakage
+    date_list = create_date_list(sorted(all_data['授權日期'].unique()))
+
+    #用date_list做出週期
     all_data['授權週數'] = all_data['授權日期'] // 7
     all_data['授權週日'] = all_data['授權日期'] % 7
-    all_data['4_day_cycle'] = all_data['授權日期'] // 4
-    all_data['4_day_count'] = all_data['授權日期'] % 4
+    # all_data['4_day_cycle'] = all_data['授權日期'] // 4
+    # all_data['4_day_count'] = all_data['授權日期'] % 4
+    for idx,sublist in enumerate(date_list):
+        all_data.loc[all_data['授權日期'].isin(sublist),'loading_cycle'] = idx
+    all_data['loading_cycle'] =all_data['loading_cycle'].astype('int8')
 
     all_data.loc[all_data['授權小時'].between(6,13),'時段'] = '早上'
     all_data.loc[all_data['授權小時'].between(13,18),'時段'] = '下午'
     all_data.loc[all_data['授權小時'].between(18,23),'時段'] = '晚上'
-    all_data['時段'].fillna('凌晨')
+    all_data['時段'].fillna('凌晨',inplace=True)
 
     all_data['是否為國外消費'] = all_data['消費地國別']!=0
 
     #某些資料可以被視為numeric or categorical data
-    for col in ['授權日期','授權週數','授權週日','4_day_cycle']:
+    for col in ['授權日期','授權週數','授權週日']:#,'4_day_cycle']:
         all_data[f"num_{col}"] = all_data[col]
 
     #組合特定cat_col
     all_data['授權週日_時段'] = all_data['授權週日'].astype('str')+"_"+all_data['時段']
     all_data['交易類別_交易型態'] = all_data['交易類別'].astype('str')+"_"+all_data['交易型態'].astype('str')
 
-    #date_list在後續feature engineering的時候可以避免data leakage
-    date_list = create_date_list(sorted(all_data['授權日期'].unique()))
+
 
     #整體資料在各分類的佔比
     previous_dates = date_list[0].copy()
-    for i in tqdm(range(1,len(date_list)),desc='整體資料佔比'):
-        for col in ['商戶類別代碼','消費城市','收單行代碼','特店代號']:
+    for col in ['商戶類別代碼','消費城市','收單行代碼','特店代號']:
+        for i in tqdm(range(1,len(date_list)),desc=f'{col}整體資料佔比'):
             mapping = all_data[all_data['授權日期'].isin(previous_dates)][col].value_counts(normalize=True).to_dict()
-            mapping['__missing__']=0
             all_data.loc[all_data['授權日期'].isin(date_list[i]),f'{col}消費總比例'] = all_data[all_data['授權日期'].isin(date_list[i])][col].map(mapping)
-        previous_dates += date_list[i]  
+            previous_dates += date_list[i]  
+        all_data[f'{col}消費總比例'].fillna(0)
 
 
     #計算同卡號(過去)每週平均刷卡次數，由於mapping計算方法與其他不同，因此沒有做成function
