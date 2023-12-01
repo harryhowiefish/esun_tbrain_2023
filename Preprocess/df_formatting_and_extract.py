@@ -306,6 +306,7 @@ def main():
     for i in tqdm(range(1,len(date_list)),desc='整體資料佔比'):
         for col in ['商戶類別代碼','消費城市','收單行代碼','特店代號']:
             mapping = all_data[all_data['授權日期'].isin(previous_dates)][col].value_counts(normalize=True).to_dict()
+            mapping['__missing__']=0
             all_data.loc[all_data['授權日期'].isin(date_list[i]),f'{col}消費總比例'] = all_data[all_data['授權日期'].isin(date_list[i])][col].map(mapping)
         previous_dates += date_list[i]  
 
@@ -355,6 +356,8 @@ def main():
         card_df = pd.concat([card_df,pd.DataFrame(new_cards,columns=['交易卡號'])])
         card_df['網路交易behavior'].fillna(-1,inplace=True) #new/inconclusive
         card_df['國內消費behavior'].fillna(-1,inplace=True) #new/inconclusive
+        card_df['可消費週數'].fillna(1,inplace=True)
+        card_df.fillna(0,inplace=True)
         card_list.update(new_cards)
 
 
