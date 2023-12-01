@@ -294,7 +294,7 @@ def main():
     all_data.loc[all_data['授權小時'].between(18,23),'時段'] = '晚上'
     all_data['時段'].fillna('凌晨',inplace=True)
 
-    all_data['是否為國外消費'] = all_data['消費地國別']!=0
+    all_data['是否為國外消費'] = (all_data['消費地國別']!=0).astype('int8')
 
     #某些資料可以被視為numeric or categorical data
     for col in ['授權日期','授權週數','授權週日']:#,'4_day_cycle']:
@@ -321,7 +321,7 @@ def main():
     for i in tqdm(range(1,len(date_list)),desc='每週期平均交易數'):
         mapping = all_data[all_data['授權日期'].isin(previous_dates)].groupby(['交易卡號','loading_cycle'])['盜刷註記'].count().groupby(level=0).mean().to_dict()
         all_data.loc[all_data['授權日期'].isin(date_list[i]),'每週期平均交易數']=all_data[all_data['授權日期'].isin(date_list[i])]['交易卡號'].map(mapping)
-        previous_dates+=date_list[1]
+        previous_dates+=date_list[i]
     all_data['每週期平均交易數'].fillna(0,inplace=True)
     processor = CardCycleProcessor(all_data)
 
@@ -343,7 +343,7 @@ def main():
 
     #針對同卡號分析行為模式，包含網路消費習慣, 國內外消費習慣, 國內消費比例, 消費頻率並記錄在card_df
     print('running card behavior...this will take a while')
-    card_df = pd.DataFrame(columns=['交易卡號','交易次數','網路消費次數','國內消費次數','交易週數','可消費週數','網路交易behavior','國內消費behavior'])
+    card_df = pd.DataFrame(columns=['交易卡號','交易總次數','網路消費次數','國內消費次數','交易週期數','可交易週期數','網路交易behavior','國內消費behavior'])
     card_list = set()
     for i in tqdm(range(0,len(date_list))):
         ##update all_data info first
@@ -361,7 +361,7 @@ def main():
         card_df = pd.concat([card_df,pd.DataFrame(new_cards,columns=['交易卡號'])])
         card_df['網路交易behavior'].fillna(-1,inplace=True) #new/inconclusive
         card_df['國內消費behavior'].fillna(-1,inplace=True) #new/inconclusive
-        card_df['可消費週數'].fillna(1,inplace=True)
+        card_df['可交易週期數'].fillna(1,inplace=True)
         card_df.fillna(0,inplace=True)
         card_list.update(new_cards)
 
