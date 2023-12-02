@@ -1,5 +1,8 @@
 .*
 !/.gitignore
+!pred_and_vote.ipynb
+!process_new_data.ipynb
+!pickle_everything.ipynb
 *.csv
 .venv/
 dataset_1st/
@@ -7,6 +10,9 @@ dataset_2nd/
 catboost_info/
 __pycache__/
 data_type.pkl
-*.ipynb
 *.cbm
 *.pkl
+NN_model.ipynb
+retrain.ipynb
+voting.ipynb
+EDA.ipynb
