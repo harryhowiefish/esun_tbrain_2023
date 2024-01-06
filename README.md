@@ -22,15 +22,3 @@ $ python ./Preprocess/df_formatting_and_extract.py
 # training,inference and voting
 $ python main.py
 ```
-
-
-## 複賽筆記;
-
-- 賽前準備：
-  1. 跑pretrain model裡的4個ipynb建立model
-  2. 跑pickle_everything.ipynb把需要的資料先存成pkl跟csv
-- 比賽當天：
-  1. 上傳prep資料夾內預先準備好的檔案
-  2. 上傳4個with_public.cbm的pretrain model
-  3. 執行process_new_data針對新的資料做特徵工程
-  4. 執行pred_and_vote來輸出submission
