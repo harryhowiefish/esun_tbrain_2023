@@ -22,3 +22,10 @@ $ python ./Preprocess/df_formatting_and_extract.py
 # training,inference and voting
 $ python main.py
 ```
+## Action list
+- add testing
+- create some pipeline framework
+- rewrite in spark
+- create OLAP concept
+- better readme
+- attach a presentation file
