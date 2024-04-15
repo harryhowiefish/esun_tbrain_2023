@@ -8,7 +8,7 @@
 #### 公開測試集資料量：805721 筆
 #### 
 #### 名次：第四名
-#### 成果：F1-scroe 0.8457
+#### 成果：F1-score 0.8457
 [比賽說明連結](https://tbrain.trendmicro.com.tw/Competitions/Details/31)
 
 ## Python Packages used
